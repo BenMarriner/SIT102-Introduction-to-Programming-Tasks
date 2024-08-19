@@ -1,0 +1,1047 @@
+program.cpp
+***************************************************************************************
+#include "splashkit.h"
+#include "datatypes.h"
+#include "math.h"
+#include "rendering.h"
+#include "gfx_animations.h"
+#include "string"
+
+using namespace std;
+
+#define NUM_OF_SEQUENCES 5 // Used to control the number of sequences to keep track of in the sequence_tracker array
+
+/**
+ * Loads all of the images required for the animation so that they can loaded into the bitmap array.
+ * A sound effect is also loaded but this will only be played once and does not belong in any arrays
+ **/
+void load_resources()
+{
+    load_bitmap("Gunbarrel", "Gunbarrel.png");
+    load_bitmap("Daniel Craig", "Bond.png");
+    load_bitmap("MuzzleFlash", "Muzzle_Flash.png");
+    load_bitmap("BloodDrip", "BloodDrip.png");
+    load_sound_effect("Gunshot", "Gunshot.wav");
+}
+
+// Begin program
+int main()
+{   
+    bool paused = false; // Animation will start unpaused
+    vector<sequence_progress> sequence_tracker; // This will keep track of the animation's progress as well as which graphics have been loaded into the bitmap array
+    for (int i = 0; i < NUM_OF_SEQUENCES; i++)
+    {
+        sequence_tracker.push_back({false, false});
+    }
+
+    vector<circle_properties> circles; // The array in which circles will be stored
+    vector<rectangle_properties> rectangles; // The array in which rectangles will be stored
+    vector<bitmap_properties> bitmaps; // The array in which bitmap images will be stored
+    vector<double> window_intervals; // The array of doubles that stores all the intervals of the window
+
+    int muzzle_flash_time = 0; // Helps keep track of how long the muzzle flash image has been on screen for
+    bool gun_shot_fired = false; // Whether or not the gun shot sound has been fired. This sound effect only needs to play once
+    
+    open_window("Gunbarrel", 1280, 720);
+    load_resources();
+    window_intervals = screen_intervals(); // Calculate window intervals
+
+    do
+    {
+        process_events();
+        
+        // Toggle paused state with ESCAPE button
+        if (key_typed(ESCAPE_KEY))
+        {
+            paused = not paused;
+        }
+        
+        // Only execute animation when not paused
+        if (not paused)
+        {
+            clear_screen(COLOR_BLACK);
+
+            /** Check through the sequence_tracker array for the first false value
+             * The program will then execute the sequence that corresponds to the index of that value
+             * Using the sequences procedure
+             **/ 
+            for (int i = 0; i < sequence_tracker.size(); i++)
+            {
+                if (sequence_tracker[i].complete == false)
+                {
+                    sequences(circles, rectangles, bitmaps, window_intervals, muzzle_flash_time, gun_shot_fired, sequence_tracker, i);
+                    break;
+                }
+            }
+            // Render all graphics and shapes onto the screen
+            render(circles, rectangles, bitmaps);
+
+            refresh_screen(60);
+        }
+
+    } while (not quit_requested());
+    
+    return 0;
+}
+***************************************************************************************
+
+data_types.h
+***************************************************************************************
+/**
+ * Here we will of the data types used for storing specific kinds of information
+ * needed throughout the animation
+ **/
+
+#ifndef DATATYPES
+#define DATATYPES
+
+#include "splashkit.h"
+
+/**
+ * Choices of properties that can be animated.
+ * Can be used for animating circles, rectangles and bitmaps
+ **/
+enum animate_property
+{
+    X,
+    Y,
+    RADIUS
+};
+
+/**
+ * A pair of doubles describing which section of the window
+ * the circle is in
+ * @field   current_interval    The interval that is to the left of an object
+ * @field   next_interval       The interval that is to the right of an object
+ **/
+struct interval
+{
+    double current_interval;
+    double next_interval;
+};
+
+/**
+ * A structure describing the appearance of a circle and
+ * how it shall be rendered
+ * @field   colour           The colour of the circle
+ * @field   x                The horizontal position of the circle
+ * @field   y                The vertical position of the circle
+ * @field   radius           The radius of the circle
+ * @field   screen_interval  The section of window the circle is location in
+ **/
+struct circle_properties
+{
+    color colour;
+    double x;
+    double y;
+    double radius;
+    interval screen_interval;
+};
+
+/**
+ * A structure describing the appearance of a rectangle and
+ * how it shall be rendered
+ * @field   colour  The colour of the rectangle
+ * @field   x       The horizontal position of the rectangle
+ * @field   y       The vertical position of the rectangle
+ * @field   width   The width of the rectangle
+ * @field   height  The height of the rectangle
+ **/
+struct rectangle_properties
+{
+    color colour;
+    double x;
+    double y;
+    double width;
+    double height;
+};
+
+/**
+ * A structure that stores information about a bitmap image
+ * @field   image_name  The name of the image
+ * @field   x           The horizontal position in the window
+ * @field   y           The vertical position in the window
+ **/
+struct bitmap_properties
+{
+    string image_name;
+    double x;
+    double y;
+};
+
+/**
+ * A structure that keeps track of whether or not each
+ * sequence has its resources loaded and if the sequence
+ * has finished being carried out.
+ * @field   complete            Is the sequence finished?
+ * @field   graphics_loaded     Have the graphics for this sequence been loaded into an array for drawing?
+ **/
+struct sequence_progress
+{
+    bool complete = false;
+    bool graphics_loaded = false;
+};
+
+#endif
+***************************************************************************************
+
+math.h
+***************************************************************************************
+/**
+ * Here is just some math functions that are needed throughout various parts
+ * of the program such as the animations for the shapes and the rendering
+ * system
+ **/
+
+#ifndef MATH
+#define MATH
+
+#include "datatypes.h"
+
+/**
+ * Divides the width of the window into sixths
+ * and stores each sixth's horizontal position 
+ * in pixels in an array of doubles
+ * @returns array of horizontal positions
+ **/
+vector<double> screen_intervals();
+
+/**
+ * Get the current section of the window a circle is in
+ * @param   circle              The circle in question
+ * @param   screen_intervals    The array of doubles that contains the horizontal positions of the intervals
+ * @returns The interval to the left and to the right of the circle in question
+ **/
+interval get_current_screen_interval(const circle_properties &circle, const vector<double> &screen_intervals);
+
+/**
+ * Takes in two doubles and swaps their values
+ * @param   value1  The first double of the swap
+ * @param   value2  The second double of the swap
+ **/
+void swap(int value1, int value2);
+
+/**
+ * Calculates the value between 0 and 1 using the differences
+ * between the input and minimum values as well as between 
+ * the input and maximum values
+ * @param   input_value     The value used to find the number between 0 and 1
+ * @param   value1          The minimum value
+ * @param   value2          The maximum value
+ * @returns A value between 0 and 1
+ **/
+double interpolate_between_values(double input_value, double value1, double value2);
+
+/**
+ * Calculates the value between 0 and 1 using the differences
+ * between the input and minimum values as well as between 
+ * the input and maximum values. This instance of the function
+ * also allows for inverting the calculated value by returning
+ * its complementary
+ * @param   input_value     The value used to find the number between 0 and 1
+ * @param   value1          The minimum value
+ * @param   value2          The maximum value
+ * @param   invert          Whether to return the calculated value's complementary
+ * @returns A value between 0 and 1
+ **/
+double interpolate_between_values(double input_value, double value1, double value2, bool invert);
+
+#endif
+***************************************************************************************
+
+math.cpp
+***************************************************************************************
+/**
+ * Here is just some math functions that are needed throughout various parts
+ * of the program such as the animations for the shapes and the rendering
+ * system
+ **/
+
+#include "math.h"
+
+/**
+ * Divides the width of the window into sixths
+ * and stores each sixth's horizontal position 
+ * in pixels in an array of doubles
+ **/
+vector<double> screen_intervals()
+{
+    vector<double> screen_intervals;
+    for (double current_interval = 0; current_interval <= 5 /* Number of intervals */; current_interval++)
+    {
+        screen_intervals.push_back(screen_width() * (current_interval / 5));
+    }
+    return screen_intervals;
+}
+
+/**
+ * Get the current section of the window a circle is in
+ **/
+interval get_current_screen_interval(const circle_properties &circle, const vector<double> &screen_intervals)
+{
+    int i = 1;
+    int j = 0;
+    while (i < screen_intervals.size())
+    {
+        if (circle.x >= screen_intervals[j] && circle.x < screen_intervals[i])
+        {
+            return {screen_intervals[j], screen_intervals[i]};
+        }
+        i++; 
+        j++;
+    }
+    return {-1, -1};
+}
+
+/**
+ * Takes in two doubles and swaps their values
+ **/
+void swap(int value1, int value2)
+{
+    int temp = value1;
+    value1 = value2;
+    value2 = temp;
+}
+
+/**
+ * Calculates the value between 0 and 1 using the differences
+ * between the input and minimum values as well as between 
+ * the input and maximum values
+ **/
+double interpolate_between_values(double input_value, double value1, double value2)
+{
+    if (value1 > value2)
+    {
+        swap(value1, value2);
+    }
+    return (value2 - input_value) / (value2 - value1);
+}
+
+/**
+ * Calculates the value between 0 and 1 using the differences
+ * between the input and minimum values as well as between 
+ * the input and maximum values. This instance of the function
+ * also allows for inverting the calculated value by returning
+ * its complementary
+ **/
+double interpolate_between_values(double input_value, double value1, double value2, bool invert)
+{
+    if (invert)
+    {
+        return 1 - interpolate_between_values(input_value, value1, value2);
+    }
+    else
+    {
+        return interpolate_between_values(input_value, value1, value2);
+    }
+}
+***************************************************************************************
+
+rendering.h
+***************************************************************************************
+/**
+ * The rendering system procedures and functions can be found here
+ **/
+
+#ifndef RENDERING
+#define RENDERING
+
+#include "splashkit.h"
+#include "math.h"
+#include "gfx_animations.h"
+
+/**
+ * Takes an image name (usually as a literal string) and searches
+ * for the image in the given bitmap array. Returns the index
+ * of the image found in the array or -1 if it cannot find an image
+ * @param   bitmaps     The array of bitmaps to search
+ * @param   image_name  The name of the image to search for
+ * @returns The index of the image found in the array or -1 if one cannot be found
+ **/
+int get_bitmap_index(const vector<bitmap_properties> &bitmaps, string image_name);
+
+/**
+ * Used in sequence 1 for deciding when to render a static circle behind
+ * the moving one as well as controlling its opacity
+ * @param   screen_intervals    Used to keep track of which section the animated circle is in
+ * @param   circles             The array of circles where all circles are stored
+ **/
+void create_trailing_circle(const vector<double> &screen_intervals, vector<circle_properties> &circles);
+
+/**
+ * Deletes the specified bitmap from a bitmap array
+ * thereby removing it from the screen
+ * @param   bitmaps     The array to delete the bitmap from
+ * @param   index       The index location of the bitmap in the array
+ **/
+void delete_bitmap(vector<bitmap_properties> &bitmaps, int index);
+
+/**
+ * Adds a circle to a circle array so that it can be rendered
+ * on the screen
+ * @param   circles                     The array of circles where all circles are stored
+ * @param   colour                      The colour of the circle being added
+ * @param   x                           The horizontal position of the circle being added
+ * @param   y                           The vertical position of the circle being added
+ * @param   radius                      The radius of the circle being added
+ * @param   current_screen_interval     The section that the circle being added is in
+ **/
+void populate_circles(vector<circle_properties> &circles, color colour, double x, double y, double radius, interval current_screen_interval);
+
+/**
+ * Adds a rectangle to a rectangle array so that it can be rendered
+ * on the screen
+ * @param   rectangles                  The array of rectangles where all rectangles are stored
+ * @param   colour                      The colour of the rectangle being added
+ * @param   x                           The horizontal position of the rectangle being added
+ * @param   y                           The vertical position of the rectangle being added
+ * @param   width                       The width of the rectangle being added
+ * @param   height                      The height of the rectangle being added
+ **/
+void populate_rectangles(vector<rectangle_properties> &rectangles, color colour, double x, double y, double width, double height);
+
+/**
+ * Adds a bitmap image to an array of bitmap images so that it can be rendered
+ * @param   bitmaps         The array of bitmap images where all images are stored
+ * @param   name_of_image   The name of the image being added
+ * @param   x               The horizontal position of the image being added
+ * @param   y               The vertical position of the image being added
+ **/
+void populate_bitmaps(vector<bitmap_properties> &bitmaps, string name_of_image, double x, double y);
+
+/**
+ * Adds a bitmap image to an array of bitmap images so that it can be rendered.
+ * This instance of the function lets us specify the index location we want to
+ * store the image in. The reason we may want to do this is so that we can have
+ * control over the order the images are rendered in
+ * @param   bitmaps         The array of bitmap images where all images are stored
+ * @param   name_of_image   The name of the image being added
+ * @param   x               The horizontal position of the image being added
+ * @param   y               The vertical position of the image being added
+ * @param   index           The index location of the array to store the image in
+ **/
+void populate_bitmaps(vector<bitmap_properties> &bitmaps, string name_of_image, double x, double y, int index);
+
+/**
+ * Handles the loading of all graphics used in the animation.
+ * It does this by loading in the graphics needed for each sequence
+ * as each sequence is executed as opposed to loading them
+ * in all at once.
+ * @param   circles             The array of circles where all circles are stored
+ * @param   rectangles          The array of rectangles where all rectangles are stored
+ * @param   bitmaps             The array of bitmap images where all images are stored
+ * @param   window_intervals    Used to keep track of which section the animated circle is in
+ * @param   sequence_tracker    Used to keep track of the sequences that have their graphics loaded or not
+ * @param   sequence_number     The number of the sequence to load graphics in for
+ * @param   gun_shot_fired      Whether or not the gun shot sound has been fired in sequence 4
+ **/ 
+void populate(vector<circle_properties> &circles, vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<double> &window_intervals, vector<sequence_progress> &sequence_tracker, int sequence_number, bool &gun_shot_fired);
+
+/**
+ * Draws all circles from a circle array onto the screen
+ * @param   circles     The array to draw circles from
+ **/
+void render_circles(const vector<circle_properties> &circles);
+
+/**
+ * Draws all rectangles from a rectangle array onto the screen
+ * @param   rectangles     The array to draw rectangles from
+ **/
+void render_rectangles(const vector<rectangle_properties> &rectangles);
+
+/**
+ * Draws all bitmap images from a bitmap array onto the screen
+ * @param   bitmaps     The array to draw bitmaps from
+ **/
+void render_bitmaps(const vector<bitmap_properties> &bitmaps);
+
+/**
+ * Draws all graphics from the specified arrays onto the screen
+ * @param   circles     The array to draw circles from
+ * @param   rectangles  The array to draw rectangles from
+ * @param   bitmaps     The array to draw bitmaps from
+ **/
+void render(const vector<circle_properties> &circles, const vector<rectangle_properties> &rectangles, const vector<bitmap_properties> &bitmaps);
+
+/**
+ * The first sequence of the animation
+ * @param   circles             The circle array where all circle information is stored
+ * @param   window_intervals    Used to keep track of which section the animated circle is in
+ * @param   sequence_tracker    Used in order to mark the completion of the first sequence
+ **/
+void sequence1(vector<circle_properties> &circles, vector<double> &window_intervals, vector<sequence_progress> &sequence_tracker);
+
+/**
+ * The second sequence of the animation
+ * @param   rectangles          The rectangle array where all rectangle information is stored
+ * @param   bitmaps             The bitmap array where all bitmap image information is stored
+ * @param   sequence_tracker    Used in order to mark the completion of the second sequence
+ **/
+void sequence2(vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker);
+
+/**
+ * The third sequence of the animation
+ * @param   rectangles          The rectangle array where all rectangle information is stored
+ * @param   bitmaps             The bitmap array where all bitmap image information is stored
+ * @param   sequence_tracker    Used in order to mark the completion of the third sequence
+ **/
+void sequence3(vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker);
+
+/**
+ * The fourth sequence of the animation
+ * @param   bitmaps             The bitmap array where all bitmap image information is stored
+ * @param   sequence_tracker    Used in order to mark the completion of the fourth sequence
+ * @param   muzzle_flash_timer  The timer that helps determine how long the muzzle flash image should stay on screen for
+ **/
+void sequence4(vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker, int &muzzle_flash_timer);
+
+/**
+ * The fifth sequence of the animation
+ * @param   bitmaps             The bitmap array where all bitmap image information is stored
+ * @param   sequence_tracker    Used in order to mark the completion of the fifth sequence
+ **/
+void sequence5(vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker);
+
+/**
+ * Chooses which sequence to execute
+ * @param   circles             The circle array where all circle information is stored
+ * @param   rectangles          The rectangle array where all rectangle information is stored
+ * @param   bitmaps             The bitmap array where all bitmap image information is stored
+ * @param   window_intervals    Used to keep track of which section the animated circle is in during sequence 1
+ * @param   muzzle_flash_timer  The timer that helps determine how long the muzzle flash image should stay on screen for during sequence 4
+ * @param   gun_shot_fired      Whether or not the gun shot sound has been fired in sequence 4
+ * @param   sequence_tracker    Keeps track of which sequences have been executed and which graphics for each of the sequences have been loaded
+ * @param   sequence_number     The number of the sequence to execute
+ **/
+void sequences(vector<circle_properties> &circles, vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<double> &window_intervals, int &muzzle_flash_timer, bool &gun_shot_fired, vector<sequence_progress> &sequence_tracker, int sequence_number);
+
+#endif
+***************************************************************************************
+
+rendering.cpp
+/**
+ * The rendering system procedures and functions can be found here
+ **/
+
+#include "rendering.h"
+#include "string"
+
+using namespace std;
+
+/**
+ * Takes an image name (usually as a literal string) and searches
+ * for the image in the given bitmap array. Returns the index
+ * of the image found in the array or -1 if it cannot find an image
+ **/
+int get_bitmap_index(const vector<bitmap_properties> &bitmaps, string image_name)
+{
+    for (int i = 0; i < bitmaps.size(); i++)
+    {
+        if (bitmaps[i].image_name == image_name)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Used in sequence 1 for deciding when to render a static circle behind
+ * the moving one as well as controlling its opacity
+ **/
+void create_trailing_circle(const vector<double> &screen_intervals, vector<circle_properties> &circles)
+{
+    if (circles[0].screen_interval.current_interval != screen_intervals[0])
+    {
+        if (circles.size() == 1) // If a trailing circle does not already exist
+        {
+            // Add a trailing circle
+            populate_circles(circles, {1,1,1,1}, circles[0].screen_interval.current_interval, screen_height() / 2, 50, circles[0].screen_interval);
+        }
+        
+        animate_circle(circles[1], X, circles[0].screen_interval.current_interval, screen_intervals);
+        interpolate_opacity(circles);
+    }
+}
+
+/**
+ * Deletes the specified bitmap from a bitmap array
+ * thereby removing it from the screen
+ **/
+void delete_bitmap(vector<bitmap_properties> &bitmaps, int index)
+{
+    if (index >= 0 && index < bitmaps.size())
+    {
+        if (bitmaps.size() == 1)
+        {
+            bitmaps.pop_back();
+        }
+        else if (bitmaps.size() == 0)
+        {
+            return;
+        }
+        else
+        {
+            bitmap_properties bitmap = bitmaps[index];
+
+            for (int i = index; i < bitmaps.size() - 1; i++)
+            {
+                bitmaps[i] = bitmaps[i + 1];
+                bitmaps[i + 1] = bitmap;
+            }
+            bitmaps.pop_back();
+        }
+    }
+}
+
+/**
+ * Adds a circle to the circle array so that it can be rendered
+ * on the screen
+ **/
+void populate_circles(vector<circle_properties> &circles, color colour, double x, double y, double radius, interval current_screen_interval)
+{
+    circles.push_back({colour, x, y, radius, current_screen_interval});
+}
+
+/**
+ * Adds a rectangle to a rectangle array so that it can be rendered
+ * on the screen
+ **/
+void populate_rectangles(vector<rectangle_properties> &rectangles, color colour, double x, double y, double width, double height)
+{
+    rectangles.push_back({colour, x, y, width, height});
+}
+
+/**
+ * Adds a bitmap image to an array of bitmap images so that it can be rendered
+ **/
+void populate_bitmaps(vector<bitmap_properties> &bitmaps, string name_of_image, double x, double y)
+{
+    bitmaps.push_back({name_of_image, x, y});
+}
+
+/**
+ * Adds a bitmap image to an array of bitmap images so that it can be rendered.
+ * This instance of the function lets us specify the index location we want to
+ * store the image in. The reason we may want to do this is so that we can have
+ * control over the order the images are rendered in
+ **/
+void populate_bitmaps(vector<bitmap_properties> &bitmaps, string name_of_image, double x, double y, int index)
+{
+    populate_bitmaps(bitmaps, name_of_image, x, y);
+    for (int i = bitmaps.size() - 1; i > index; i--)
+    {
+        bitmaps[i] = bitmaps[i - 1];
+        bitmaps[i - 1] = {name_of_image, x, y};        
+    }
+}
+
+/**
+ * Handles the loading of all graphics used in the animation.
+ * It does this by loading in the graphics needed for each sequence
+ * as each sequence is executed as opposed to loading them
+ * in all at once.
+ **/
+void populate(vector<circle_properties> &circles, vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<double> &window_intervals, vector<sequence_progress> &sequence_tracker, int sequence_number, bool &gun_shot_fired)
+{
+    switch (sequence_number)
+    {
+        // Sequence 1 graphics
+        case 0:
+        {
+            if (sequence_tracker[0].graphics_loaded == false)
+            {
+                populate_circles(circles, COLOR_WHITE, 0, screen_height() / 2, 50, {window_intervals[0], window_intervals[1]});
+                sequence_tracker[0].graphics_loaded = true;
+            }
+            break;
+        }
+        // Sequence 2 graphics
+        case 1:
+        {
+            if (sequence_tracker[1].graphics_loaded == false)
+            {
+                populate_bitmaps(bitmaps, "Gunbarrel", screen_width(), 0);
+                populate_rectangles(rectangles, COLOR_WHITE, bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].x, bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].y, 600, 600);
+                sequence_tracker[1].graphics_loaded = true;
+            }
+            break;
+        }
+        // Sequence 3 graphics
+        case 2:
+        {
+            if (sequence_tracker[2].graphics_loaded == false)
+            {
+                populate_bitmaps(bitmaps, "Daniel Craig", (screen_width() - bitmap_width("Daniel Craig")) / 2, (screen_height() - bitmap_height("Daniel Craig")) / 2);
+                sequence_tracker[2].graphics_loaded = true;
+            }
+            break;
+        }
+        // Sequence 4 graphics
+        case 3:
+        {
+            if (sequence_tracker[3].graphics_loaded == false)
+            {
+                populate_bitmaps(bitmaps, "MuzzleFlash", bitmaps[get_bitmap_index(bitmaps, "Daniel Craig")].x + (97 - (bitmap_width("MuzzleFlash") / 2)), bitmaps[get_bitmap_index(bitmaps, "Daniel Craig")].y + (97 - (bitmap_height("MuzzleFlash") / 2)), 1);
+                if (gun_shot_fired == false)
+                {
+                    play_sound_effect("Gunshot");
+                    gun_shot_fired = true;
+                }
+                sequence_tracker[3].graphics_loaded = true;
+            }
+            break;            
+        }
+        // Sequence 5 graphics
+        case 4:
+        {
+            if (sequence_tracker[4].graphics_loaded == false)
+            {
+                populate_bitmaps(bitmaps, "BloodDrip", 0, -bitmap_height("BloodDrip"), 0);
+                sequence_tracker[4].graphics_loaded = true;
+            }
+            break;
+        }
+    }
+}
+
+/**
+ * Draws all circles from a circle array onto the screen
+ **/
+void render_circles(const vector<circle_properties> &circles)
+{
+    for (int i = 0; i < circles.size(); i++)
+    {
+        fill_circle
+        (
+            circles[i].colour,
+            circles[i].x,
+            circles[i].y,
+            circles[i].radius
+        );
+    }
+}
+
+/**
+ * Draws all rectangles from a rectangle array onto the screen
+ **/
+void render_rectangles(const vector<rectangle_properties> &rectangles)
+{
+    for (int i = 0; i < rectangles.size(); i++)
+    {
+        fill_rectangle
+        (
+            rectangles[i].colour,
+            rectangles[i].x,
+            rectangles[i].y,
+            rectangles[i].width,
+            rectangles[i].height
+        );
+    }
+}
+
+/**
+ * Draws all bitmap images from a bitmap array onto the screen
+ **/
+void render_bitmaps(const vector<bitmap_properties> &bitmaps)
+{
+    for (int i = bitmaps.size() - 1; i >= 0; i--)
+    {
+        draw_bitmap(bitmaps[i].image_name, bitmaps[i].x, bitmaps[i].y);
+    }
+}
+
+/**
+ * Draws all graphics from the specified arrays onto the screen
+ **/
+void render(const vector<circle_properties> &circles, const vector<rectangle_properties> &rectangles, const vector<bitmap_properties> &bitmaps)
+{
+    render_rectangles(rectangles);
+    render_bitmaps(bitmaps);
+    render_circles(circles);
+}
+
+/**
+ * The first sequence of the animation
+ **/
+void sequence1(vector<circle_properties> &circles, vector<double> &window_intervals, vector<sequence_progress> &sequence_tracker)
+{   
+    if (circles[0].x < screen_width() + circles[0].radius)
+    {
+        circle_translate(circles[0], 6, window_intervals);
+        create_trailing_circle(window_intervals, circles);
+    }
+    else
+    {
+        // This sequence has finished
+        sequence_tracker[0].complete = true;
+    }
+}
+
+/**
+ * The second sequence of the animation
+ **/
+void sequence2(vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker)
+{
+    if (bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].x > screen_width() / 2 - 100)
+    {
+        bitmap_translate(bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")], X, -5);
+        rectangles[0].x = bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].x + 300;
+        rectangles[0].y = bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].y;
+    }
+    else
+    {
+        // This sequence has finished
+        sequence_tracker[1].complete = true;
+    }
+}
+
+/**
+ * The third sequence of the animation
+ **/
+void sequence3(vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker)
+{
+    if (bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].x > 0)
+    {
+        bitmap_translate(bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")], X, -5);
+        rectangles[0].x = bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].x + 300;
+        rectangles[0].y = bitmaps[get_bitmap_index(bitmaps, "Gunbarrel")].y;
+    }
+    else
+    {
+        // This sequence has finished
+        sequence_tracker[2].complete = true;
+    }
+}
+
+/**
+ * The fourth sequence of the animation
+ **/
+void sequence4(vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker, int &muzzle_flash_timer)
+{
+    if (muzzle_flash_timer == 5)
+    {
+        delete_bitmap(bitmaps, get_bitmap_index(bitmaps, "MuzzleFlash"));
+        muzzle_flash_timer += 1;
+    }
+    else if (muzzle_flash_timer < 5)
+    {
+        muzzle_flash_timer += 1;
+    }
+    else
+    {
+        sequence_tracker[3].complete = true;
+    }
+}
+
+/**
+ * The fifth sequence of the animation
+ **/
+void sequence5(vector<bitmap_properties> &bitmaps, vector<sequence_progress> &sequence_tracker)
+{
+    if (bitmaps[get_bitmap_index(bitmaps, "BloodDrip")].y < 0)
+    {
+        bitmap_translate(bitmaps[get_bitmap_index(bitmaps, "BloodDrip")], Y, 5);
+    }
+    else
+    {
+        sequence_tracker[4].complete = true;
+    } 
+}
+
+/**
+ * Chooses which sequence to execute
+ **/
+void sequences(vector<circle_properties> &circles, vector<rectangle_properties> &rectangles, vector<bitmap_properties> &bitmaps, vector<double> &window_intervals, int &muzzle_flash_timer, bool &gun_shot_fired, vector<sequence_progress> &sequence_tracker, int sequence_number)
+{
+    populate(circles, rectangles, bitmaps, window_intervals, sequence_tracker, sequence_number, gun_shot_fired);
+    switch (sequence_number)
+    {
+        case 0:
+        {
+            sequence1(circles, window_intervals, sequence_tracker);
+            break;
+        }
+        case 1:
+        {
+            sequence2(rectangles, bitmaps, sequence_tracker);
+            break;
+        }
+        case 2:
+        {
+            sequence3(rectangles, bitmaps, sequence_tracker);
+            break;
+        }
+        case 3:
+        {
+            sequence4(bitmaps, sequence_tracker, muzzle_flash_timer);
+            break;
+        }
+        case 4:
+        {
+            sequence5(bitmaps, sequence_tracker);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+***************************************************************************************
+
+gfx_animations.h
+***************************************************************************************
+/**
+ * Here are some procedures that help with the animations of the graphics
+ * used in the sequences of the gun barrel animation
+ **/
+
+#ifndef GFX_ANIMATIONS
+#define GFX_ANIMATIONS
+
+#include "rendering.h"
+
+/**
+ * Uses the position of the animated circle and its screen intervals
+ * To control the opacity of trailing circle. It does this by
+ * working out how far the animated circle is from its next screen
+ * interval and calculating a value between 0 and 1 from there.
+ * Similar to the interpolate_between_values function
+ * @param   circles     The array of circles being accessed
+ **/
+void interpolate_opacity(vector<circle_properties> &circles);
+
+/**
+ * The base function for animating circle properties
+ * @param   circle              The circle to be animated
+ * @param   property            The property of the circle that is to be animated
+ * @param   value               The value to set the property to
+ * @param   screen_intervals    Used in determining the section that the animated circle is in. This is bound to change as the circle is moving across the screen
+ **/
+void animate_circle(circle_properties &circle, animate_property property, double value, const vector<double> &screen_intervals);
+
+/**
+ * The base function for animating bitmap properties
+ * @param   bitmap      The bitmap to be animated
+ * @param   property    The property of the bitmap that is to be animated
+ * @param   value       The value to set the property to
+**/
+void animate_bitmap(circle_properties &bitmap, animate_property property, double value);
+
+/**
+ * Moves a circle in the horizontal direction
+ * @param   circle              The circle to be moved
+ * @param   distance            Distance to move the circle across
+ * @param   screen_intervals    Used in determining the section that the animated circle is in. This is bound to change as the circle is moving across the screen
+ **/
+void circle_translate(circle_properties &circle, double distance, const vector<double> &screen_intervals);
+
+/**
+ * Moves a bitmap image in a specified direction
+ * @param   bitmap      The image to be moved
+ * @param   direction   The direction to move the image in
+ * @param   distance    The distance to move the image
+ **/
+void bitmap_translate(bitmap_properties &bitmap, animate_property direction, double distance);
+
+#endif
+***************************************************************************************
+
+gfx_animations.cpp
+***************************************************************************************
+/**
+ * Here are some procedures that help with the animations of the graphics
+ * used in the sequences of the gun barrel animation
+ **/
+
+#include "gfx_animations.h"
+
+/**
+ * Uses the position of the animated circle and its screen intervals
+ * To control the opacity of trailing circle. It does this by
+ * working out how far the animated circle is from its next screen
+ * interval and calculating a value between 0 and 1 from there.
+ * Similar to the interpolate_between_values function-
+ **/
+void interpolate_opacity(vector<circle_properties> &circles)
+{
+    circles[1].colour.a = 1 - (circles[0].x / (circles[0].screen_interval.next_interval - circles[0].screen_interval.current_interval));
+}
+
+/**
+ * The base function for animating circle properties
+ **/
+void animate_circle(circle_properties &circle, animate_property property, double value, const vector<double> &screen_intervals)
+{
+    switch (property)
+    {
+        case X:
+        circle.x = value;
+        break;
+        case Y:
+        circle.y = value;
+        break;
+        case RADIUS:
+        circle.radius = value;
+        break;
+    }
+    circle.screen_interval = get_current_screen_interval(circle, screen_intervals);
+}
+
+/**
+ * The base function for animating bitmap properties
+ **/
+void animate_bitmap(bitmap_properties &bitmap, animate_property property, double value)
+{
+    switch (property)
+    {
+        case X:
+        {
+            bitmap.x = value;
+        break;
+        }
+        case Y:
+        {
+            bitmap.y = value;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+
+/**
+ * Moves a circle in the horizontal direction
+ **/
+void circle_translate(circle_properties &circle, double distance, const vector<double> &screen_intervals)
+{
+    animate_circle(circle, X, circle.x + distance, screen_intervals);
+}
+
+/**
+ * Moves a bitmap image in a specified direction
+ **/
+void bitmap_translate(bitmap_properties &bitmap, animate_property direction, double distance)
+{
+    switch (direction)
+    {
+        case X:
+        {
+            animate_bitmap(bitmap, direction, bitmap.x + distance);
+            break;
+        }
+        case Y:
+        {
+            animate_bitmap(bitmap, direction, bitmap.y + distance);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
+***************************************************************************************

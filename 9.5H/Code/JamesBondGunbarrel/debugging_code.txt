@@ -1,0 +1,29 @@
+This is just a file that contains all of the debugging code used
+This is not used in the final program but I have stored it away
+in this document in case I want to make changes later.
+
+// Debug animation progress
+for (int i = 0; i < sequence_tracker.size(); i++)
+{
+    write(to_string(sequence_tracker[i].complete) + " ");
+}
+write_line();
+// Debug graphics load states
+for (int i = 0; i < sequence_tracker.size(); i++)
+{
+    write(to_string(sequence_tracker[i].graphics_loaded) + " ");
+}
+write_line();
+            
+// Debug Bitmap cache
+write("Bitmap Cache: ");
+for (int i = 0; i < bitmaps.size(); i++)
+{
+    write(to_string(i) + ". " + bitmaps[i].image_name + " ");
+}
+write_line();
+            
+// Debug Muzzle flash timer
+write_line("Muzzle Flash Timer: " + to_string(muzzle_flash_time));
+
+write_line("x: " + to_string(circles[0].x) + " " + "y: " + to_string(circles[0].y) + " " + "radius: " + to_string(circles[0].radius) + " " + "current interval: " + to_string(circles[0].screen_interval.current_interval) + " " + "next interval: " + to_string(circles[0].screen_interval.next_interval));

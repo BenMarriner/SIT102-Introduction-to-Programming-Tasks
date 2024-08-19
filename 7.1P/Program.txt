@@ -1,0 +1,260 @@
+Ben@LAPTOP-M4Q25MUN MINGW64 /c/Users/Ben/OneDrive - Deakin University/Year 1/Semester 1/Introduction to Programming/7.1P/Code/ArraysAndStructs
+$ ./ArraysAndStructs
+Enter kingdom name:
+Deakin
+Please enter the number of knights you would like to add to the kingdom:
+3
+Enter name:
+Sir Lancelot
+Enter age:
+19
+1: January
+2: February
+3: March
+4: April
+5: May
+6: June
+7: July
+8: August
+9: September
+10: October
+11: November
+12: December
+Pick a birth month:
+11
+Enter level for your knight:
+100
+Enter name:
+Sir Brownie
+Enter age:
+14
+1: January
+2: February
+3: March
+4: April
+5: May
+6: June
+7: July
+8: August
+9: September
+10: October
+11: November
+12: December
+Pick a birth month:
+9
+Enter level for your knight:
+50
+Enter name:
+Sir Pendles
+Enter age:
+28
+1: January
+2: February
+3: March
+4: April
+5: May
+6: June
+7: July
+8: August
+9: September
+10: October
+11: November
+12: December
+Pick a birth month:
+6
+Enter level for your knight:
+10
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+5
+Number of knights in kingdom: 3
+List of Knights in kingdom:
+Sir Lancelot
+Sir Brownie
+Sir Pendles
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+1
+Enter name:
+Sir Chameleon
+Enter age:
+26
+1: January
+2: February
+3: March
+4: April
+5: May
+6: June
+7: July
+8: August
+9: September
+10: October
+11: November
+12: December
+Pick a birth month:
+2
+Enter level for your knight:
+25
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+2
+[1] Sir Lancelot
+[2] Sir Brownie
+[3] Sir Pendles
+[4] Sir Chameleon
+Please enter the number of the knight you want to select or enter 0 if you do not want to select a knight:
+4
+Name: Sir Chameleon
+Age: 26
+Birth Month: February
+Level: 25
+This knight has no weapons
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+2
+[1] Sir Lancelot
+[2] Sir Brownie
+[3] Sir Pendles
+[4] Sir Chameleon
+Please enter the number of the knight you want to select or enter 0 if you do not want to select a knight:
+3
+Name: Sir Pendles
+Age: 28
+Birth Month: June
+Level: 10
+This knight has no weapons
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+3
+[1] Sir Lancelot
+[2] Sir Brownie
+[3] Sir Pendles
+[4] Sir Chameleon
+Please enter the number of the knight you want to select or enter 0 if you do not want to select a knight:
+4
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+4
+[1] Sir Lancelot
+[2] Sir Brownie
+[3] Sir Pendles
+Please enter the number of the knight you want to select or enter 0 if you do not want to select a knight:
+3
+
+== Update Knight ==
+
+1: Update name
+2: Update age
+3: Update birth month
+4: Update level
+5: Add Weapon
+6: Remove Weapon
+7: Finish update
+Select option:
+5
+Please enter the name of the weapon:
+Footy
+The weapon has been added
+
+== Update Knight ==
+
+1: Update name
+2: Update age
+3: Update birth month
+4: Update level
+5: Add Weapon
+6: Remove Weapon
+7: Finish update
+Select option:
+5
+Please enter the name of the weapon:
+Essendon Guernse
+The weapon has been added
+
+== Update Knight ==
+
+1: Update name
+2: Update age
+3: Update birth month
+4: Update level
+5: Add Weapon
+6: Remove Weapon
+7: Finish update
+Select option:
+6
+1: FOOTY
+2: ESSENDON GUERNSE
+Please type the number of the weapon you want to delete or type 0 to go back:
+2
+Removed ESSENDON GUERNSE
+
+== Update Knight ==
+
+1: Update name
+2: Update age
+3: Update birth month
+4: Update level
+5: Add Weapon
+6: Remove Weapon
+7: Finish update
+Select option:
+7
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+2
+[1] Sir Lancelot
+[2] Sir Brownie
+[3] Sir Pendles
+Please enter the number of the knight you want to select or enter 0 if you do not want to select a knight:
+3
+Name: Sir Pendles
+Age: 28
+Birth Month: June
+Level: 10
+Weapons List:
+FOOTY
+1: Add Knight
+2: Query Knight
+3: Delete Knight
+4: Update Knight
+5: Display Kingdom Details
+6: Quit
+Please type the number of the item you want to select:
+6
+
+Ben@LAPTOP-M4Q25MUN MINGW64 /c/Users/Ben/OneDrive - Deakin University/Year 1/Semester 1/Introduction to Programming/7.1P/Code/ArraysAndStructs
