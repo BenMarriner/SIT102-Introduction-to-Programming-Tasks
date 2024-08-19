@@ -6,7 +6,7 @@ There is a grading schema associated with the top-level folder names of this rep
 P = Pass task,
 C = Credit task,
 D = Distinction task,
-H = High Distinction task,
+H = High Distinction task
 
 I recommend checking out the H level tasks as these are the best examples of my work in this unit.
 
